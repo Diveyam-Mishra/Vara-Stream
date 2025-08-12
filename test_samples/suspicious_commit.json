@@ -1,0 +1,66 @@
+{
+  "ref": "refs/heads/fix/security-patch",
+  "before": "6113728f27ae82c7b1a177c8d03f9e96e0adf246",
+  "after": "1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
+  "repository": {
+    "id": 1296269,
+    "full_name": "octocat/Hello-World",
+    "owner": {
+      "name": "octocat",
+      "email": "octocat@example.com"
+    },
+    "html_url": "https://github.com/octocat/Hello-World"
+  },
+  "pusher": {
+    "name": "new-contributor",
+    "email": "new-contributor@example.com"
+  },
+  "head_commit": {
+    "id": "1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
+    "message": "Fix security issue in authentication",
+    "timestamp": "2023-07-01T03:14:15Z",
+    "url": "https://github.com/octocat/Hello-World/commit/1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
+    "author": {
+      "name": "New Contributor",
+      "email": "new-contributor@example.com"
+    },
+    "committer": {
+      "name": "New Contributor",
+      "email": "new-contributor@example.com"
+    },
+    "added": [
+      "src/utils/http_client.py"
+    ],
+    "removed": [],
+    "modified": [
+      "src/auth/user_auth.py",
+      "src/config.py",
+      "src/models/user.py"
+    ]
+  },
+  "commits": [
+    {
+      "id": "1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
+      "message": "Fix security issue in authentication",
+      "timestamp": "2023-07-01T03:14:15Z",
+      "url": "https://github.com/octocat/Hello-World/commit/1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
+      "author": {
+        "name": "New Contributor",
+        "email": "new-contributor@example.com"
+      },
+      "committer": {
+        "name": "New Contributor",
+        "email": "new-contributor@example.com"
+      },
+      "added": [
+        "src/utils/http_client.py"
+      ],
+      "removed": [],
+      "modified": [
+        "src/auth/user_auth.py",
+        "src/config.py",
+        "src/models/user.py"
+      ]
+    }
+  ]
+}

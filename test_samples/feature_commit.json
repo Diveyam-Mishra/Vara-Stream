@@ -1,0 +1,78 @@
+{
+  "ref": "refs/heads/feature/payment-gateway",
+  "before": "6113728f27ae82c7b1a177c8d03f9e96e0adf246",
+  "after": "8d9f0b9f8e7d6c5b4a3f2g1h0i9j8k7l6m5n4o3p",
+  "repository": {
+    "id": 1296269,
+    "full_name": "octocat/Hello-World",
+    "owner": {
+      "name": "octocat",
+      "email": "octocat@example.com"
+    },
+    "html_url": "https://github.com/octocat/Hello-World"
+  },
+  "pusher": {
+    "name": "octocat",
+    "email": "octocat@example.com"
+  },
+  "head_commit": {
+    "id": "8d9f0b9f8e7d6c5b4a3f2g1h0i9j8k7l6m5n4o3p",
+    "message": "Implement Stripe payment gateway integration\n\nThis commit adds a new payment module that integrates with Stripe API.\nIt includes:\n- Core payment processing logic\n- Error handling\n- Unit tests\n- Documentation",
+    "timestamp": "2023-06-15T09:22:45Z",
+    "url": "https://github.com/octocat/Hello-World/commit/8d9f0b9f8e7d6c5b4a3f2g1h0i9j8k7l6m5n4o3p",
+    "author": {
+      "name": "Octo Cat",
+      "email": "octocat@example.com"
+    },
+    "committer": {
+      "name": "Octo Cat",
+      "email": "octocat@example.com"
+    },
+    "added": [
+      "src/payment/stripe_gateway.py",
+      "src/payment/models.py",
+      "tests/payment/test_stripe_gateway.py",
+      "docs/payment_integration.md",
+      "docs/diagrams/payment_flow.png"
+    ],
+    "removed": [],
+    "modified": [
+      "src/app.py",
+      "src/models/user.py",
+      "src/api/routes.py",
+      "tests/conftest.py",
+      "requirements.txt"
+    ]
+  },
+  "commits": [
+    {
+      "id": "8d9f0b9f8e7d6c5b4a3f2g1h0i9j8k7l6m5n4o3p",
+      "message": "Implement Stripe payment gateway integration",
+      "timestamp": "2023-06-15T09:22:45Z",
+      "url": "https://github.com/octocat/Hello-World/commit/8d9f0b9f8e7d6c5b4a3f2g1h0i9j8k7l6m5n4o3p",
+      "author": {
+        "name": "Octo Cat",
+        "email": "octocat@example.com"
+      },
+      "committer": {
+        "name": "Octo Cat",
+        "email": "octocat@example.com"
+      },
+      "added": [
+        "src/payment/stripe_gateway.py",
+        "src/payment/models.py",
+        "tests/payment/test_stripe_gateway.py",
+        "docs/payment_integration.md",
+        "docs/diagrams/payment_flow.png"
+      ],
+      "removed": [],
+      "modified": [
+        "src/app.py",
+        "src/models/user.py",
+        "src/api/routes.py",
+        "tests/conftest.py",
+        "requirements.txt"
+      ]
+    }
+  ]
+}

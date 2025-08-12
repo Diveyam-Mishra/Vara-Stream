@@ -1,0 +1,25 @@
+# Google Generative AI SDK
+google-generativeai>=0.3.0
+langchain-google-genai>=0.0.5
+
+# LangChain and LangGraph
+langchain>=0.0.267
+langgraph>=0.0.17
+
+# Web3 and Ethereum
+web3>=6.0.0
+
+# Utilities
+python-dotenv>=1.0.0
+asyncio>=3.4.3
+aiohttp>=3.8.4
+pydantic>=2.0.0
+
+# Web API and Webhook
+fastapi>=0.100.0
+uvicorn[standard]>=0.22.0
+python-multipart>=0.0.6
+
+# Testing
+pytest>=7.3.1
+pytest-asyncio>=0.21.0

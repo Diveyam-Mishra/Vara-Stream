@@ -1,0 +1,60 @@
+{
+  "ref": "refs/heads/main",
+  "before": "6113728f27ae82c7b1a177c8d03f9e96e0adf246",
+  "after": "59b20b8d5c6ff8d09518216f2b5b86f039d8650c",
+  "repository": {
+    "id": 1296269,
+    "full_name": "octocat/Hello-World",
+    "owner": {
+      "name": "octocat",
+      "email": "octocat@example.com"
+    },
+    "html_url": "https://github.com/octocat/Hello-World"
+  },
+  "pusher": {
+    "name": "octocat",
+    "email": "octocat@example.com"
+  },
+  "head_commit": {
+    "id": "59b20b8d5c6ff8d09518216f2b5b86f039d8650c",
+    "message": "Fix bug in user authentication module",
+    "timestamp": "2023-06-01T12:34:56Z",
+    "url": "https://github.com/octocat/Hello-World/commit/59b20b8d5c6ff8d09518216f2b5b86f039d8650c",
+    "author": {
+      "name": "Octo Cat",
+      "email": "octocat@example.com"
+    },
+    "committer": {
+      "name": "Octo Cat",
+      "email": "octocat@example.com"
+    },
+    "added": [],
+    "removed": [],
+    "modified": [
+      "src/auth/user_auth.py",
+      "tests/auth/test_user_auth.py"
+    ]
+  },
+  "commits": [
+    {
+      "id": "59b20b8d5c6ff8d09518216f2b5b86f039d8650c",
+      "message": "Fix bug in user authentication module",
+      "timestamp": "2023-06-01T12:34:56Z",
+      "url": "https://github.com/octocat/Hello-World/commit/59b20b8d5c6ff8d09518216f2b5b86f039d8650c",
+      "author": {
+        "name": "Octo Cat",
+        "email": "octocat@example.com"
+      },
+      "committer": {
+        "name": "Octo Cat",
+        "email": "octocat@example.com"
+      },
+      "added": [],
+      "removed": [],
+      "modified": [
+        "src/auth/user_auth.py",
+        "tests/auth/test_user_auth.py"
+      ]
+    }
+  ]
+}
