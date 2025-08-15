@@ -91,6 +91,33 @@ class GeminiCommitWorkflow:
         workflow.set_entry_point("extract_context")
         return workflow.compile()
     
+    def _normalize_file(self, file) -> Dict:
+        """Convert file to consistent dict format, handling both strings and dicts"""
+        if isinstance(file, dict):
+            return file
+        elif isinstance(file, str):
+            return {
+                "filename": file,
+                "status": "unknown",
+                "additions": 0,
+                "deletions": 0,
+                "changes": 0,
+                "patch": ""
+            }
+        else:
+            return {
+                "filename": "",
+                "status": "unknown", 
+                "additions": 0,
+                "deletions": 0,
+                "changes": 0,
+                "patch": ""
+            }
+    
+    def _normalize_files(self, files) -> List[Dict]:
+        """Normalize a list of files to consistent dict format"""
+        return [self._normalize_file(f) for f in files] if files else []
+    
     async def invoke(self, state: GeminiCommitAnalysisState) -> GeminiCommitAnalysisState:
         """Invoke the workflow with a provided state (for test harness compatibility)"""
         # Extract required components from state
@@ -106,7 +133,7 @@ class GeminiCommitWorkflow:
         merged_state = {**state, **result}
         
         # Validate the merged state
-        if not isinstance(merged_state, GeminiCommitAnalysisState):
+        if not isinstance(merged_state, dict):
             raise ValueError("Invalid state type")
         
         # Check for missing required fields
@@ -180,12 +207,12 @@ class GeminiCommitWorkflow:
         
         # Use enhanced data if available, otherwise fall back to basic data
         if enhanced_data and enhanced_data.get("files"):
-            enhanced_files = enhanced_data["files"]
+            enhanced_files = self._normalize_files(enhanced_data["files"])
             total_changes = enhanced_data.get("stats", {}).get("total", 0)
             commit_info = enhanced_data.get("commit_data", {})
         else:
-            enhanced_files = files
-            total_changes = sum(f.get("changes", 0) for f in files)
+            enhanced_files = self._normalize_files(files)
+            total_changes = sum(f["changes"] for f in enhanced_files)
             commit_info = commit
         
         # Build comprehensive context with enhanced data
@@ -247,11 +274,11 @@ class GeminiCommitWorkflow:
         patch_count = 0
         
         # Prioritize patches from enhanced data
-        for file in files[:10]:  # Analyze up to 10 files to stay within token limits
-            filename = file.get("filename", "")
-            
+        normalized_files = self._normalize_files(files)
+        for file in normalized_files[:10]:  # Analyze up to 10 files to stay within token limits
+            filename = file["filename"]
             # Try to get patch from enhanced data first, then from file info
-            patch_content = patches.get(filename) or file.get("patch", "")
+            patch_content = patches.get(filename) or file["patch"]
             
             if patch_content:
                 combined_diff += f"\n--- {filename} ---\n"
@@ -361,8 +388,8 @@ class GeminiCommitWorkflow:
         
         **Commit Details:**
         - Message: {commit.get('message', '')}
-        - Files: {[f.get('filename', '') for f in commit.get('files', [])[:10]]}
-        - Changes: {sum(f.get('changes', 0) for f in commit.get('files', []))} lines
+        - Files: {[f["filename"] for f in self._normalize_files(commit.get('files', []))[:10]]}
+        - Changes: {sum(f["changes"] for f in self._normalize_files(commit.get('files', [])))} lines
         
         **Architecture Analysis:**
         {json.dumps(state['architecture_analysis'], indent=2)}
@@ -404,19 +431,20 @@ class GeminiCommitWorkflow:
         
         files = state["commit_data"].get("files", [])
         
-        test_files = [f for f in files if self._is_test_file(f.get("filename", ""))]
-        code_files = [f for f in files if self._is_code_file(f.get("filename", ""))]
+        normalized_files = self._normalize_files(files)
+        test_files = [f for f in normalized_files if self._is_test_file(f["filename"])]
+        code_files = [f for f in normalized_files if self._is_code_file(f["filename"])]
         
         test_coverage = 50  # Base score
         
         if test_files:
-            test_additions = sum(f.get("additions", 0) for f in test_files)
+            test_additions = sum(f["additions"] for f in test_files)
             test_coverage += min(30, len(test_files) * 10)  # Bonus for test files
             test_coverage += min(20, test_additions // 5)    # Bonus for test content
         
         if code_files and test_files:
-            code_additions = sum(f.get("additions", 0) for f in code_files)
-            test_additions = sum(f.get("additions", 0) for f in test_files)
+            code_additions = sum(f["additions"] for f in code_files)
+            test_additions = sum(f["additions"] for f in test_files)
             if code_additions > 0:
                 ratio_bonus = min(25, (test_additions / code_additions) * 50)
                 test_coverage += ratio_bonus
@@ -430,18 +458,19 @@ class GeminiCommitWorkflow:
         
         files = state["commit_data"].get("files", [])
         
-        doc_files = [f for f in files if self._is_documentation_file(f.get("filename", ""))]
+        normalized_files = self._normalize_files(files)
+        doc_files = [f for f in normalized_files if self._is_documentation_file(f["filename"])]
         
         doc_score = 40  # Base score
         
         for doc_file in doc_files:
-            additions = doc_file.get("additions", 0)
-            doc_score += min(20, additions * 2)  # 2 points per doc line
+            doc_score += min(20, doc_file["additions"] * 2)  # 2 points per doc line
         
         # Check for inline documentation
-        code_files = [f for f in files if self._is_code_file(f.get("filename", ""))]
+        code_files = [f for f in normalized_files if self._is_code_file(f["filename"])]
+        
         for code_file in code_files:
-            patch = code_file.get("patch", "")
+            patch = code_file["patch"]
             if patch:
                 comment_lines = self._count_comment_additions(patch)
                 doc_score += min(20, comment_lines)
@@ -602,20 +631,22 @@ class GeminiCommitWorkflow:
         return state
     
     # Helper methods
-    def _detect_languages(self, files: List[Dict]) -> Dict[str, int]:
+    def _detect_languages(self, files: List) -> Dict[str, int]:
         """Detect programming languages in changed files"""
         languages = {}
-        for file in files:
-            filename = file.get("filename", "")
+        normalized_files = self._normalize_files(files)
+        for file in normalized_files:
+            filename = file["filename"]
             ext = filename.split(".")[-1] if "." in filename else "unknown"
             languages[ext] = languages.get(ext, 0) + 1
         return languages
     
-    def _categorize_files(self, files: List[Dict]) -> Dict[str, int]:
+    def _categorize_files(self, files: List) -> Dict[str, int]:
         """Categorize files by type"""
         categories = {"code": 0, "test": 0, "doc": 0, "config": 0, "other": 0}
-        for file in files:
-            filename = file.get("filename", "")
+        normalized_files = self._normalize_files(files)
+        for file in normalized_files:
+            filename = file["filename"]
             if self._is_test_file(filename):
                 categories["test"] += 1
             elif self._is_documentation_file(filename):
@@ -628,17 +659,19 @@ class GeminiCommitWorkflow:
                 categories["other"] += 1
         return categories
     
-    def _analyze_change_distribution(self, files: List[Dict]) -> Dict:
+    def _analyze_change_distribution(self, files: List) -> Dict:
         """Analyze how changes are distributed across files"""
-        total_changes = sum(f.get("changes", 0) for f in files)
+        normalized_files = self._normalize_files(files)
+        total_changes = sum(f["changes"] for f in normalized_files)
+        large_changes = len([f for f in normalized_files if f["changes"] > 50])
+        
         if total_changes == 0:
             return {"distribution": "empty"}
         
-        large_changes = len([f for f in files if f.get("changes", 0) > 50])
         return {
             "total_changes": total_changes,
             "files_with_large_changes": large_changes,
-            "average_changes_per_file": total_changes / len(files) if files else 0
+            "average_changes_per_file": total_changes / len(normalized_files) if normalized_files else 0
         }
     
     def _is_test_file(self, filename: str) -> bool:

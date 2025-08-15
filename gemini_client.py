@@ -32,6 +32,33 @@ class GeminiAnalyzer:
         
         print("✅ Gemini AI initialized successfully")
     
+    def _normalize_file(self, file) -> Dict:
+        """Convert file to consistent dict format, handling both strings and dicts"""
+        if isinstance(file, dict):
+            return file
+        elif isinstance(file, str):
+            return {
+                "filename": file,
+                "status": "unknown",
+                "additions": 0,
+                "deletions": 0,
+                "changes": 0,
+                "patch": ""
+            }
+        else:
+            return {
+                "filename": "",
+                "status": "unknown", 
+                "additions": 0,
+                "deletions": 0,
+                "changes": 0,
+                "patch": ""
+            }
+    
+    def _normalize_files(self, files) -> List[Dict]:
+        """Normalize a list of files to consistent dict format"""
+        return [self._normalize_file(f) for f in files] if files else []
+    
     async def analyze_code_with_context(self, code_diff: str, context: Dict) -> Dict:
         """Analyze code using Gemini's advanced context understanding"""
         
@@ -105,11 +132,12 @@ class GeminiAnalyzer:
         
         file_summary = []
         for file in files_changed[:20]:  # Analyze up to 20 files
+            normalized_file = self._normalize_file(file)
             file_summary.append({
-                "path": file.get("filename", ""),
-                "status": file.get("status", "modified"),
-                "additions": file.get("additions", 0),
-                "deletions": file.get("deletions", 0)
+                "path": normalized_file["filename"],
+                "status": normalized_file["status"],
+                "additions": normalized_file["additions"],
+                "deletions": normalized_file["deletions"]
             })
         
         prompt = f"""
@@ -169,16 +197,16 @@ class GeminiAnalyzer:
         **Commit Information:**
         - Message: "{commit_data.get('message', '')}"
         - Files changed: {len(commit_data.get('files', []))}
-        - Total additions: {sum(f.get('additions', 0) for f in commit_data.get('files', []))}
-        - Total deletions: {sum(f.get('deletions', 0) for f in commit_data.get('files', []))}
+        - Total additions: {sum(f['additions'] for f in self._normalize_files(commit_data.get('files', [])))}
+        - Total deletions: {sum(f['deletions'] for f in self._normalize_files(commit_data.get('files', [])))}
         - Author: {commit_data.get('author', {}).get('name', 'Unknown')}
         
         **File Changes Summary:**
         {json.dumps([{
-            'file': f.get('filename', ''), 
-            'status': f.get('status', ''),
-            'changes': f.get('changes', 0)
-        } for f in commit_data.get('files', [])[:10]], indent=2)}
+            'file': f['filename'], 
+            'status': f['status'],
+            'changes': f['changes']
+        } for f in self._normalize_files(commit_data.get('files', []))[:10]], indent=2)}
         
         **Fraud Detection Criteria:**
         Look for these suspicious patterns:

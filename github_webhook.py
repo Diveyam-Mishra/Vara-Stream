@@ -474,6 +474,229 @@ async def get_analysis_result(repo_owner: str, repo_name: str, commit_id: str):
     }
 
 
+@app.post("/analyze/{repo_owner}/{repo_name}/{commit_id}")
+async def analyze_commit_manually(repo_owner: str, repo_name: str, commit_id: str):
+    """
+    Manually analyze any public commit (no webhook required)
+    """
+    logger.info(f"Manual analysis requested for {repo_owner}/{repo_name}/{commit_id}")
+    
+    if not github_client:
+        raise HTTPException(status_code=503, detail="GitHub API client not available")
+    
+    try:
+        # Check if analysis already exists
+        result_id = f"{repo_owner}/{repo_name}/{commit_id}"
+        if result_id in analysis_results:
+            return {
+                "status": "already_exists",
+                "message": "Analysis already completed",
+                "result_url": f"/analysis/{repo_owner}/{repo_name}/{commit_id}"
+            }
+        
+        # Fetch commit data from GitHub API
+        logger.info(f"Fetching commit data for {repo_owner}/{repo_name}/{commit_id}")
+        commit_data = github_client.fetch_commit_patches(repo_owner, repo_name, commit_id)
+        
+        # Build initial state for analysis
+        initial_state = {
+            "commit_data": {
+                "repo_name": repo_name,
+                "repo_owner": repo_owner,
+                "commit_id": commit_id,
+                "committer": commit_data.get("commit_data", {}).get("author", {}).get("name", "Unknown"),
+                "commit_message": commit_data.get("commit_data", {}).get("message", "Manual analysis"),
+                "commit_url": f"https://github.com/{repo_owner}/{repo_name}/commit/{commit_id}",
+                "timestamp": commit_data.get("commit_data", {}).get("timestamp", ""),
+                "files": commit_data.get("files", []),
+                "patches": commit_data.get("patches", {}),
+                "stats": commit_data.get("stats", {}),
+                "api_call_success": True,
+                "data_completeness": 100.0,
+                "fetch_errors": []
+            },
+            "repository_context": {
+                "name": repo_name,
+                "owner": repo_owner,
+                "full_name": f"{repo_owner}/{repo_name}"
+            },
+            "project_requirements": [
+                "Maintain code quality and security standards",
+                "Follow best practices for the detected programming languages",
+                "Ensure proper error handling and documentation"
+            ]
+        }
+        
+        # Run workflow
+        logger.info(f"Starting manual analysis workflow for {commit_id}")
+        final_state = await workflow.invoke(initial_state)
+        
+        # Store results
+        analysis_results[result_id] = final_state
+        
+        completion_pct = final_state.get("completion_percentage", 0)
+        
+        return {
+            "status": "completed",
+            "repo": f"{repo_owner}/{repo_name}",
+            "commit_id": commit_id,
+            "completion_percentage": completion_pct,
+            "result_url": f"/analysis/{repo_owner}/{repo_name}/{commit_id}",
+            "message": "Manual analysis completed successfully"
+        }
+        
+    except Exception as e:
+        logger.error(f"Manual analysis failed for {repo_owner}/{repo_name}/{commit_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+
+@app.post("/analyze-public/{repo_owner}/{repo_name}/{commit_id}")
+async def analyze_public_commit(repo_owner: str, repo_name: str, commit_id: str):
+    """
+    Analyze any public commit using GitHub's public API (no app installation required)
+    """
+    logger.info(f"Public analysis requested for {repo_owner}/{repo_name}/{commit_id}")
+    
+    try:
+        # Check if analysis already exists
+        result_id = f"{repo_owner}/{repo_name}/{commit_id}"
+        if result_id in analysis_results:
+            return {
+                "status": "already_exists",
+                "message": "Analysis already completed",
+                "result_url": f"/analysis/{repo_owner}/{repo_name}/{commit_id}"
+            }
+        
+        # Use GitHub's public API (no authentication required for public repos)
+        commit_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/commits/{commit_id}"
+        
+        logger.info(f"Fetching commit data from GitHub public API: {commit_url}")
+        
+        import requests
+        response = requests.get(commit_url, headers={
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'GitHub-Commit-Analyzer'
+        })
+        
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=response.status_code, 
+                detail=f"Failed to fetch commit from GitHub: {response.text}"
+            )
+        
+        commit_data = response.json()
+        
+        # Extract file information
+        files = []
+        patches = {}
+        total_additions = 0
+        total_deletions = 0
+        
+        for file in commit_data.get('files', []):
+            file_info = {
+                'filename': file.get('filename', ''),
+                'status': file.get('status', 'modified'),
+                'additions': file.get('additions', 0),
+                'deletions': file.get('deletions', 0),
+                'changes': file.get('changes', 0),
+                'patch': file.get('patch', '')
+            }
+            files.append(file_info)
+            
+            # Store patch content
+            if file.get('patch'):
+                patches[file['filename']] = file['patch']
+            
+            total_additions += file.get('additions', 0)
+            total_deletions += file.get('deletions', 0)
+        
+        logger.info(f"Fetched data for {len(files)} files with {total_additions + total_deletions} total changes")
+        
+        # Build initial state for analysis
+        initial_state = {
+            "commit_data": {
+                "repo_name": repo_name,
+                "repo_owner": repo_owner,
+                "commit_id": commit_id,
+                "committer": commit_data.get("commit", {}).get("author", {}).get("name", "Unknown"),
+                "commit_message": commit_data.get("commit", {}).get("message", ""),
+                "commit_url": commit_data.get("html_url", f"https://github.com/{repo_owner}/{repo_name}/commit/{commit_id}"),
+                "timestamp": commit_data.get("commit", {}).get("author", {}).get("date", ""),
+                "files": files,
+                "patches": patches,
+                "stats": {
+                    "additions": total_additions,
+                    "deletions": total_deletions,
+                    "total": total_additions + total_deletions
+                },
+                "api_call_success": True,
+                "data_completeness": 100.0,
+                "fetch_errors": []
+            },
+            "repository_context": {
+                "name": repo_name,
+                "owner": repo_owner,
+                "full_name": f"{repo_owner}/{repo_name}"
+            },
+            "project_requirements": [
+                "Maintain code quality and security standards",
+                "Follow best practices for the detected programming languages",
+                "Ensure proper error handling and documentation"
+            ]
+        }
+        
+        # Run workflow
+        logger.info(f"Starting public analysis workflow for {commit_id}")
+        final_state = await workflow.invoke(initial_state)
+        
+        # Store results
+        analysis_results[result_id] = final_state
+        
+        completion_pct = final_state.get("completion_percentage", 0)
+        
+        # Extract key scores for response
+        scores = {
+            "completion_percentage": completion_pct,
+            "confidence": final_state.get("confidence", 0),
+            "code_quality_score": final_state.get("code_quality_score"),
+            "security_score": final_state.get("security_score"),
+            "test_coverage_score": final_state.get("test_coverage_score"),
+            "documentation_score": final_state.get("documentation_score")
+        }
+        
+        # Add architecture and fraud scores if available
+        if "architecture_analysis" in final_state:
+            arch = final_state["architecture_analysis"]
+            if isinstance(arch, dict) and "architectural_impact" in arch:
+                scores["architecture_score"] = arch["architectural_impact"]
+        
+        if "fraud_detection" in final_state:
+            fraud = final_state["fraud_detection"]
+            if isinstance(fraud, dict) and "fraud_risk_score" in fraud:
+                scores["fraud_risk_score"] = fraud["fraud_risk_score"]
+        
+        return {
+            "status": "completed",
+            "repo": f"{repo_owner}/{repo_name}",
+            "commit_id": commit_id,
+            "commit_message": commit_data.get("commit", {}).get("message", ""),
+            "author": commit_data.get("commit", {}).get("author", {}).get("name", "Unknown"),
+            "date": commit_data.get("commit", {}).get("author", {}).get("date", ""),
+            "files_changed": len(files),
+            "total_changes": total_additions + total_deletions,
+            "scores": scores,
+            "result_url": f"/analysis/{repo_owner}/{repo_name}/{commit_id}",
+            "commit_url": commit_data.get("html_url", ""),
+            "message": "Public analysis completed successfully"
+        }
+        
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions
+    except Exception as e:
+        logger.error(f"Public analysis failed for {repo_owner}/{repo_name}/{commit_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+
 @app.get("/healthcheck")
 async def healthcheck():
     """
@@ -492,11 +715,30 @@ async def root():
         "description": "Analyzes GitHub commits using Google Gemini LLM",
         "endpoints": {
             "/webhook": "POST - GitHub webhook endpoint",
-            "/analysis/{repo_owner}/{repo_name}/{commit_id}": "GET - Retrieve analysis for a commit",
+            "/analyze/{repo_owner}/{repo_name}/{commit_id}": "POST - Analyze commit (requires GitHub App installation)",
+            "/analyze-public/{repo_owner}/{repo_name}/{commit_id}": "POST - Analyze any public commit (no installation required)",
+            "/analysis/{repo_owner}/{repo_name}/{commit_id}": "GET - Retrieve analysis results",
             "/healthcheck": "GET - Health check"
         },
         "version": "1.0.0"
     }
+
+
+@app.post("/")
+async def root_webhook(
+    request: Request, 
+    x_hub_signature_256: Optional[str] = Header(None, alias="X-Hub-Signature-256"),
+    x_github_event: Optional[str] = Header(None, alias="X-GitHub-Event")
+):
+    """
+    Handle GitHub webhooks sent to root endpoint (common misconfiguration)
+    Redirects to the proper webhook handler
+    """
+    logger.warning("⚠️  GitHub webhook received at root endpoint '/' instead of '/webhook'")
+    logger.info("💡 Please update your GitHub webhook URL to include '/webhook' at the end")
+    
+    # Forward to the actual webhook handler
+    return await github_webhook(request, x_hub_signature_256, x_github_event)
 
 
 if __name__ == "__main__":
