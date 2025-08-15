@@ -16,6 +16,17 @@ class GeminiCommitAnalysisState(TypedDict):
     project_requirements: List[str]
     commit_context: Dict[str, Any]
     
+    # Enhanced commit data from GitHub API
+    enhanced_commit_data: Dict[str, Any]  # Full commit data from GitHub API
+    patches: Dict[str, str]  # file_path -> patch_content
+    file_contents: Dict[str, str]  # file_path -> full_content (optional)
+    related_files: List[str]  # test files, configs, etc. (optional)
+    
+    # Data quality tracking
+    fetch_errors: List[str]  # Any errors during data fetching
+    data_completeness: float  # Percentage of data successfully fetched (0-100)
+    api_call_success: bool  # Whether GitHub API calls succeeded
+    
     # Gemini Analysis Results
     code_analysis: Dict[str, Any]
     architecture_analysis: Dict[str, Any]
@@ -123,15 +134,32 @@ class GeminiCommitWorkflow:
             "repository_context": repo_context,
             "project_requirements": requirements,
             "commit_context": {},
+            
+            # Enhanced commit data fields (with defaults)
+            "enhanced_commit_data": {},
+            "patches": commit_data.get("patches", {}),
+            "file_contents": {},
+            "related_files": [],
+            
+            # Data quality tracking (with defaults)
+            "fetch_errors": [],
+            "data_completeness": 100.0,
+            "api_call_success": True,
+            
+            # Analysis results
             "code_analysis": {},
             "architecture_analysis": {},
             "fraud_detection": {},
             "feature_progress": {},
+            
+            # Scores
             "quality_score": 0.0,
             "implementation_score": 0.0,
             "security_score": 0.0,
             "documentation_score": 0.0,
             "test_coverage_score": 0.0,
+            
+            # Final output
             "completion_percentage": 0.0,
             "confidence_score": 0.0,
             "analysis_summary": "",
@@ -144,61 +172,151 @@ class GeminiCommitWorkflow:
         return final_state
     
     async def extract_commit_context(self, state: GeminiCommitAnalysisState) -> GeminiCommitAnalysisState:
-        """Extract rich context for Gemini analysis"""
+        """Extract rich context for Gemini analysis using enhanced data"""
         
         commit = state["commit_data"]
+        enhanced_data = state["enhanced_commit_data"]
         files = commit.get("files", [])
         
-        # Build comprehensive context
+        # Use enhanced data if available, otherwise fall back to basic data
+        if enhanced_data and enhanced_data.get("files"):
+            enhanced_files = enhanced_data["files"]
+            total_changes = enhanced_data.get("stats", {}).get("total", 0)
+            commit_info = enhanced_data.get("commit_data", {})
+        else:
+            enhanced_files = files
+            total_changes = sum(f.get("changes", 0) for f in files)
+            commit_info = commit
+        
+        # Build comprehensive context with enhanced data
         context = {
             "commit_metadata": {
-                "sha": commit.get("id", "unknown"),
-                "message": commit.get("message", ""),
-                "author": commit.get("author", {}),
-                "timestamp": commit.get("timestamp", ""),
-                "files_count": len(files),
-                "total_changes": sum(f.get("changes", 0) for f in files)
+                "sha": commit_info.get("sha", commit.get("id", "unknown")),
+                "message": commit_info.get("message", commit.get("message", "")),
+                "author": commit_info.get("author", commit.get("author", {})),
+                "committer": commit_info.get("committer", {}),
+                "timestamp": commit_info.get("timestamp", commit.get("timestamp", "")),
+                "files_count": len(enhanced_files),
+                "total_changes": total_changes,
+                "is_merge_commit": enhanced_data.get("is_merge_commit", False),
+                "parent_commits": enhanced_data.get("parent_commits", [])
             },
             "file_analysis": {
-                "languages": self._detect_languages(files),
-                "file_types": self._categorize_files(files),
-                "change_distribution": self._analyze_change_distribution(files)
+                "languages": self._detect_languages(enhanced_files),
+                "file_types": self._categorize_files(enhanced_files),
+                "change_distribution": self._analyze_change_distribution(enhanced_files)
             },
-            "repository_info": state["repository_context"]
+            "repository_info": state["repository_context"],
+            "data_quality": {
+                "api_call_success": state["api_call_success"],
+                "data_completeness": state["data_completeness"],
+                "fetch_errors": state["fetch_errors"],
+                "patches_available": len(state["patches"]),
+                "enhanced_data_available": bool(enhanced_data)
+            }
         }
         
         state["commit_context"] = context
-        print(f" Context extracted: {len(files)} files, {context['commit_metadata']['total_changes']} changes")
+        
+        # Log context extraction with data quality info
+        completeness = state["data_completeness"]
+        api_success = "✓" if state["api_call_success"] else "✗"
+        print(f" Context extracted: {len(enhanced_files)} files, {total_changes} changes, "
+              f"{completeness:.1f}% data completeness {api_success}")
+        
+        if state["fetch_errors"]:
+            print(f" ⚠ Data fetch errors: {len(state['fetch_errors'])}")
+        
         return state
     
     async def gemini_code_analysis(self, state: GeminiCommitAnalysisState) -> GeminiCommitAnalysisState:
-        """Comprehensive code analysis using Gemini"""
+        """Comprehensive code analysis using Gemini with enhanced data"""
         
-        commit = state["commit_data"]
-        files = commit.get("files", [])
+        # Use enhanced data if available, otherwise fall back to basic data
+        enhanced_data = state["enhanced_commit_data"]
+        patches = state["patches"]
+        data_completeness = state["data_completeness"]
         
-        # Prepare code diffs for Gemini analysis
-        combined_diff = ""
-        for file in files[:10]:  # Analyze up to 10 files to stay within token limits
-            if file.get("patch"):
-                combined_diff += f"\n--- {file['filename']} ---\n"
-                combined_diff += file["patch"][:1000]  # Limit per file
-                combined_diff += "\n"
-        
-        if combined_diff:
-            analysis = await self.gemini.analyze_code_with_context(
-                combined_diff, 
-                state["repository_context"]
-            )
-            state["code_analysis"] = analysis
-            state["quality_score"] = analysis.get("code_quality_score", 50)
-            state["security_score"] = analysis.get("security_score", 75)
+        if enhanced_data and enhanced_data.get("files"):
+            files = enhanced_data["files"]
         else:
-            state["code_analysis"] = {"message": "No code changes to analyze"}
+            files = state["commit_data"].get("files", [])
+        
+        # Prepare code diffs for Gemini analysis using enhanced patches
+        combined_diff = ""
+        patch_count = 0
+        
+        # Prioritize patches from enhanced data
+        for file in files[:10]:  # Analyze up to 10 files to stay within token limits
+            filename = file.get("filename", "")
+            
+            # Try to get patch from enhanced data first, then from file info
+            patch_content = patches.get(filename) or file.get("patch", "")
+            
+            if patch_content:
+                combined_diff += f"\n--- {filename} ---\n"
+                combined_diff += patch_content[:1000]  # Limit per file
+                combined_diff += "\n"
+                patch_count += 1
+        
+        # Perform analysis if we have patch data
+        if combined_diff and patch_count > 0:
+            try:
+                analysis = await self.gemini.analyze_code_with_context(
+                    combined_diff, 
+                    state["repository_context"]
+                )
+                
+                # Enhance analysis with data quality information
+                analysis["data_quality"] = {
+                    "patches_analyzed": patch_count,
+                    "total_files": len(files),
+                    "data_completeness": data_completeness,
+                    "api_call_success": state["api_call_success"]
+                }
+                
+                state["code_analysis"] = analysis
+                
+                # Adjust scores based on data quality
+                base_quality = analysis.get("code_quality_score", 50)
+                base_security = analysis.get("security_score", 75)
+                
+                # Apply data completeness factor
+                quality_factor = min(1.0, data_completeness / 100.0)
+                state["quality_score"] = base_quality * quality_factor
+                state["security_score"] = base_security * quality_factor
+                
+            except Exception as e:
+                print(f" ⚠ Code analysis error: {str(e)}")
+                state["code_analysis"] = {
+                    "message": f"Code analysis failed: {str(e)}",
+                    "error": True,
+                    "data_quality": {
+                        "patches_analyzed": patch_count,
+                        "total_files": len(files),
+                        "data_completeness": data_completeness,
+                        "api_call_success": state["api_call_success"]
+                    }
+                }
+                state["quality_score"] = 25  # Low score due to analysis failure
+                state["security_score"] = 50
+        else:
+            state["code_analysis"] = {
+                "message": "No code changes to analyze",
+                "data_quality": {
+                    "patches_analyzed": 0,
+                    "total_files": len(files),
+                    "data_completeness": data_completeness,
+                    "api_call_success": state["api_call_success"]
+                }
+            }
             state["quality_score"] = 50
             state["security_score"] = 75
         
-        print(f" Code analysis complete: Quality={state['quality_score']}/100")
+        completeness_indicator = f"({data_completeness:.1f}% data)"
+        print(f" Code analysis complete: Quality={state['quality_score']:.1f}/100, "
+              f"Security={state['security_score']:.1f}/100 {completeness_indicator}")
+        
         return state
     
     async def gemini_architecture_analysis(self, state: GeminiCommitAnalysisState) -> GeminiCommitAnalysisState:
@@ -361,17 +479,43 @@ class GeminiCommitWorkflow:
         if fraud_risk > 50:
             completion *= (100 - fraud_risk) / 100
         
-        # Calculate confidence based on analysis quality
+        # Calculate confidence based on analysis quality and data completeness
         confidence = 100
+        data_completeness = state["data_completeness"]
+        api_success = state["api_call_success"]
+        
+        # Apply fraud risk penalty
         if fraud_risk > 30:
             confidence -= fraud_risk // 2
+        
+        # Apply code quality penalty
         if state["quality_score"] < 50:
             confidence -= 15
+        
+        # Apply file count penalty
         if len(state["commit_data"].get("files", [])) < 1:
             confidence -= 25
         
+        # Apply data completeness penalty
+        if data_completeness < 100:
+            completeness_penalty = (100 - data_completeness) * 0.3  # 30% penalty factor
+            confidence -= completeness_penalty
+        
+        # Apply API failure penalty
+        if not api_success:
+            confidence -= 20
+        
+        # Apply fetch errors penalty
+        if state["fetch_errors"]:
+            error_penalty = min(15, len(state["fetch_errors"]) * 5)
+            confidence -= error_penalty
+        
+        # Apply data completeness factor to completion score
+        completion_factor = min(1.0, data_completeness / 100.0)
+        completion *= completion_factor
+        
         state["completion_percentage"] = round(max(0, min(100, completion)), 2)
-        state["confidence_score"] = round(max(30, confidence), 2)
+        state["confidence_score"] = round(max(20, confidence), 2)
         
         # Extract recommendations from analyses
         recommendations = []
@@ -379,7 +523,15 @@ class GeminiCommitWorkflow:
         recommendations.extend(state["fraud_detection"].get("recommendations", []))
         state["recommendations"] = recommendations
         
-        print(f" Final scores: Completion={state['completion_percentage']}%, Confidence={state['confidence_score']}%")
+        # Log final scores with data quality information
+        data_quality_indicator = f"({state['data_completeness']:.1f}% data)"
+        api_indicator = "✓" if state["api_call_success"] else "✗"
+        print(f" Final scores: Completion={state['completion_percentage']}%, "
+              f"Confidence={state['confidence_score']}% {data_quality_indicator} {api_indicator}")
+        
+        if state["fetch_errors"]:
+            print(f" ⚠ Analysis completed with {len(state['fetch_errors'])} data fetch errors")
+        
         return state
     
     async def generate_comprehensive_report(self, state: GeminiCommitAnalysisState) -> GeminiCommitAnalysisState:
@@ -390,7 +542,14 @@ class GeminiCommitWorkflow:
                 "commit_sha": state["commit_data"].get("id", "unknown"),
                 "timestamp": datetime.now().isoformat(),
                 "analyzer": "Gemini-1.5-Pro",
-                "confidence": state["confidence_score"]
+                "confidence": state["confidence_score"],
+                "data_quality": {
+                    "api_call_success": state["api_call_success"],
+                    "data_completeness": state["data_completeness"],
+                    "fetch_errors": state["fetch_errors"],
+                    "patches_available": len(state["patches"]),
+                    "enhanced_data_available": bool(state["enhanced_commit_data"])
+                }
             },
             "completion_assessment": {
                 "overall_percentage": state["completion_percentage"],
@@ -413,11 +572,22 @@ class GeminiCommitWorkflow:
                 "strengths": state["code_analysis"].get("strengths", []),
                 "concerns": state["code_analysis"].get("concerns", []),
                 "improvement_areas": state["code_analysis"].get("recommendations", [])
+            },
+            "data_quality_summary": {
+                "completeness_percentage": state["data_completeness"],
+                "api_integration_status": "success" if state["api_call_success"] else "failed",
+                "error_count": len(state["fetch_errors"]),
+                "enhanced_features_available": bool(state["enhanced_commit_data"])
             }
         }
         
         state["analysis_summary"] = json.dumps(report, indent=2)
-        print(" Comprehensive report generated")
+        
+        # Log report generation with data quality summary
+        data_status = "enhanced" if state["enhanced_commit_data"] else "basic"
+        print(f" Comprehensive report generated with {data_status} data "
+              f"({state['data_completeness']:.1f}% completeness)")
+        
         return state
     
     async def store_analysis(self, state: GeminiCommitAnalysisState) -> GeminiCommitAnalysisState:

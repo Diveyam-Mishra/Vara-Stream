@@ -7,6 +7,7 @@ import hashlib
 import json
 import logging
 import asyncio
+from datetime import datetime
 from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response, HTTPException, Header, Depends
@@ -93,21 +94,48 @@ def verify_signature(payload_body: bytes, signature_header: str) -> bool:
     return hmac.compare_digest(signature, expected_signature)
 
 
-async def extract_patches(repo_name: str, commit_id: str, files: List[str]) -> Dict[str, str]:
+async def extract_patches(repo_owner: str, repo_name: str, commit_id: str, files: List[str]) -> Dict[str, str]:
     """
-    Extract patch content for modified files in a commit
-    In a real implementation, this would use the GitHub API to get real patch content
+    Extract patch content for modified files in a commit using GitHub API
     """
-    # This is a placeholder implementation
-    # In a real scenario, you'd use GitHub API to fetch actual patch content
-    logger.info(f"Extracting patches for {len(files)} files in {repo_name} commit {commit_id}")
+    logger.info(f"Extracting patches for {len(files)} files in {repo_owner}/{repo_name} commit {commit_id}")
     
-    patches = {}
-    for file in files:
-        # Simulate patch content for testing
-        patches[file] = f"Sample patch content for {file} in commit {commit_id}"
+    if not github_client:
+        logger.warning("GitHub API client not available, using mock patch data")
+        patches = {}
+        for file in files:
+            patches[file] = f"Mock patch content for {file} in commit {commit_id}"
+        return patches
+    
+    try:
+        # Use the GitHub API client to fetch real commit patch data
+        commit_data = github_client.fetch_commit_patches(repo_owner, repo_name, commit_id)
         
-    return patches
+        # Extract patches from the API response
+        patches = commit_data.get("patches", {})
+        
+        # Log success
+        patch_count = len(patches)
+        total_files = len(files)
+        logger.info(f"Successfully fetched {patch_count} patches out of {total_files} files for commit {commit_id}")
+        
+        # If some files don't have patches (e.g., binary files, renames), log this
+        if patch_count < total_files:
+            missing_patches = set(files) - set(patches.keys())
+            logger.debug(f"Files without patch data: {list(missing_patches)}")
+        
+        return patches
+        
+    except Exception as e:
+        logger.error(f"Failed to fetch patches for commit {commit_id}: {str(e)}")
+        
+        # Fallback to mock data if API call fails
+        logger.warning("Falling back to mock patch data due to API error")
+        patches = {}
+        for file in files:
+            patches[file] = f"Fallback patch content for {file} in commit {commit_id} (API error: {str(e)})"
+        
+        return patches
 
 
 @app.post("/webhook")
@@ -234,27 +262,101 @@ async def process_push_event(payload: Dict[str, Any]) -> Dict[str, Any]:
     removed_files = head_commit.get("removed", [])
     all_files = added_files + modified_files + removed_files
     
-    # Extract patch content for added and modified files
-    # In a real implementation, you'd fetch this from the GitHub API
-    patches = await extract_patches(repo_name, commit_id, added_files + modified_files)
+    # Extract enhanced commit data using GitHub API
+    enhanced_data = {}
+    patches = {}
+    fetch_errors = []
+    api_call_success = False
+    data_completeness = 0.0
     
-    # Create initial state for the workflow
+    if github_client:
+        try:
+            # Fetch comprehensive commit data from GitHub API
+            logger.info(f"Fetching enhanced commit data for {commit_id}")
+            enhanced_data = github_client.fetch_commit_patches(repo_owner, repo_name, commit_id)
+            patches = enhanced_data.get("patches", {})
+            api_call_success = True
+            
+            # Calculate data completeness
+            total_files = len(added_files + modified_files)
+            if total_files > 0:
+                files_with_patches = len(patches)
+                data_completeness = (files_with_patches / total_files) * 100
+            else:
+                data_completeness = 100.0  # No files to analyze
+                
+            logger.info(f"Enhanced data fetch successful: {len(patches)} patches, {data_completeness:.1f}% completeness")
+            
+        except Exception as e:
+            error_msg = f"Failed to fetch enhanced commit data: {str(e)}"
+            logger.error(error_msg)
+            fetch_errors.append(error_msg)
+            
+            # Fallback to basic patch extraction
+            patches = await extract_patches(repo_owner, repo_name, commit_id, added_files + modified_files)
+            data_completeness = 50.0  # Partial data available
+    else:
+        # No GitHub client available
+        error_msg = "GitHub API client not available"
+        logger.warning(error_msg)
+        fetch_errors.append(error_msg)
+        patches = await extract_patches(repo_owner, repo_name, commit_id, added_files + modified_files)
+        data_completeness = 25.0  # Mock data only
+    
+    # Create initial state for the workflow with enhanced data structure
     initial_state = CommitState(
+        # Basic commit data
         commit_data={
             "repo_name": repo_name,
-            "repo_owner": repo_owner,  # Add repo owner for API calls
+            "repo_owner": repo_owner,
             "commit_id": commit_id,
             "committer": committer,
             "commit_message": commit_message,
             "commit_url": commit_url,
             "timestamp": timestamp,
             "files": all_files,
-            "patches": patches,
+            "patches": patches,  # Keep for backward compatibility
             "ref": ref
         },
-        analysis_results={},
-        component_scores={},
-        final_output={}
+        repository_context={
+            "repo_name": repo_name,
+            "repo_owner": repo_owner,
+            "primary_language": "Unknown",  # Could be enhanced later
+            "project_type": "Unknown"
+        },
+        project_requirements=[],  # Will be populated by workflow if needed
+        commit_context={},  # Will be populated by workflow
+        
+        # Enhanced commit data from GitHub API
+        enhanced_commit_data=enhanced_data,
+        patches=patches,
+        file_contents={},  # Could be populated later if needed
+        related_files=[],  # Could be populated later if needed
+        
+        # Data quality tracking
+        fetch_errors=fetch_errors,
+        data_completeness=data_completeness,
+        api_call_success=api_call_success,
+        
+        # Analysis results (initialized empty)
+        code_analysis={},
+        architecture_analysis={},
+        fraud_detection={},
+        feature_progress={},
+        
+        # Scores (initialized to 0)
+        quality_score=0.0,
+        implementation_score=0.0,
+        security_score=0.0,
+        documentation_score=0.0,
+        test_coverage_score=0.0,
+        
+        # Final output (initialized empty)
+        completion_percentage=0.0,
+        confidence_score=0.0,
+        analysis_summary="",
+        recommendations=[],
+        ipfs_hash=""
     )
     
     # Update commit status to "pending"
@@ -278,11 +380,21 @@ async def process_push_event(payload: Dict[str, Any]) -> Dict[str, Any]:
     
     # Store the analysis result
     result_id = f"{repo_owner}/{repo_name}/{commit_id}"
-    analysis_results[result_id] = final_state.final_output
+    analysis_results[result_id] = final_state
     
-    # Log the completion and return the results
-    completion_pct = final_state.final_output.get("completion_percentage", 0)
-    logger.info(f"Analysis completed: {completion_pct}% completion")
+    # Log the completion and return the results with data quality info
+    completion_pct = final_state.get("completion_percentage", 0)
+    data_completeness = final_state.get("data_completeness", 0)
+    api_success = final_state.get("api_call_success", False)
+    fetch_errors = final_state.get("fetch_errors", [])
+    
+    # Enhanced logging with data quality information
+    api_indicator = "✓" if api_success else "✗"
+    logger.info(f"Analysis completed: {completion_pct}% completion, "
+               f"{data_completeness:.1f}% data completeness {api_indicator}")
+    
+    if fetch_errors:
+        logger.warning(f"Analysis completed with {len(fetch_errors)} data fetch errors")
     
     # Update commit status based on analysis result
     if github_client:
@@ -322,9 +434,23 @@ async def process_push_event(payload: Dict[str, Any]) -> Dict[str, Any]:
         "commit_id": commit_id,
         "result_id": result_id,
         "completion_percentage": completion_pct,
-        "report_summary": final_state.final_output.get("report_summary", ""),
-        "component_scores": final_state.component_scores,
-        "timestamp": final_state.final_output.get("timestamp", "")
+        "confidence_score": final_state.get("confidence_score", 0),
+        "data_quality": {
+            "api_call_success": api_success,
+            "data_completeness": data_completeness,
+            "fetch_errors": fetch_errors,
+            "enhanced_data_available": bool(final_state.get("enhanced_commit_data"))
+        },
+        "component_scores": {
+            "feature_implementation": final_state.get("implementation_score", 0),
+            "code_quality": final_state.get("quality_score", 0),
+            "test_coverage": final_state.get("test_coverage_score", 0),
+            "documentation": final_state.get("documentation_score", 0),
+            "security": final_state.get("security_score", 0)
+        },
+        "analysis_summary": final_state.get("analysis_summary", ""),
+        "recommendations": final_state.get("recommendations", []),
+        "timestamp": datetime.now().isoformat()
     }
 
 
