@@ -2,7 +2,7 @@
 name = "vara-stream"
 version = "0.1.0"
 description = "Add your description here"
-requires-python = ">=3.13"
+requires-python = "3.11.9"
 dependencies = [
     "aiohttp>=3.12.15",
     "cryptography>=45.0.6",
