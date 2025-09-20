@@ -22,6 +22,23 @@ class ColorFormatter(logging.Formatter):
         logging.CRITICAL: "\033[35m",  # Magenta
     }
     RESET = "\033[0m"
+    # Extra palette
+    BLUE = "\033[94m"
+    GREEN = "\033[32m"
+    CYAN = "\033[36m"
+    YELLOW = "\033[33m"
+    MAGENTA = "\033[35m"
+    RED = "\033[31m"
+    GREY = "\033[90m"
+
+    NAME_COLORS = {
+        "GitHubWebhook": GREEN,
+        "GitHubAPIClient": MAGENTA,
+        "GeminiAnalyzer": BLUE,
+        "LangChainWorkflow": CYAN,
+        "Workflow": YELLOW,
+        "TestHarness": CYAN,
+    }
 
     def __init__(self, fmt: str | None = None, datefmt: str | None = None, color: bool = True):
         default_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -32,9 +49,21 @@ class ColorFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         if self.color:
-            color = self.COLORS.get(record.levelno, "")
-            record.levelname = f"{color}{record.levelname}{self.RESET}"
-            record.name = f"\033[94m{record.name}{self.RESET}"  # Blue for logger name
+            level_color = self.COLORS.get(record.levelno, "")
+            record.levelname = f"{level_color}{record.levelname}{self.RESET}"
+
+            # Colorize logger name by known categories (fallback to blue)
+            base_name = (record.name or "").split(".")[0]
+            name_color = self.NAME_COLORS.get(base_name, self.BLUE)
+            record.name = f"{name_color}{record.name}{self.RESET}"
+
+            # Optional: lightweight token highlighting inside the message
+            if isinstance(record.msg, str):
+                msg = record.msg
+                msg = msg.replace("✓", f"{self.GREEN}✓{self.RESET}")
+                msg = msg.replace("✗", f"{self.RED}✗{self.RESET}")
+                record.msg = msg
+
         return super().format(record)
 
 
