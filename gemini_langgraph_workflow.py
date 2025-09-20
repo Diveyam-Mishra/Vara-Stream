@@ -414,7 +414,10 @@ class GeminiCommitWorkflow:
         """
         
         try:
-            response = await self.gemini.llm.ainvoke([{"role": "user", "content": feature_prompt}])
+            response = await self.gemini.llm.ainvoke(
+                [{"role": "user", "content": feature_prompt}],
+                config={"callbacks": getattr(self.gemini, "callbacks", None)}
+            )
             feature_analysis = json.loads(response.content)
             state["feature_progress"] = feature_analysis
             state["implementation_score"] = feature_analysis.get("feature_implementation_score", 0)

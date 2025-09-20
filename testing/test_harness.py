@@ -196,21 +196,29 @@ class TestHarness:
             # Execute workflow
             final_state = await self.workflow.invoke(initial_state)
             
-            # Check if we got a final output
-            if not final_state.final_output:
+            # Validate output
+            if "completion_percentage" not in final_state:
                 raise ValueError("Workflow did not produce a final output")
                 
-            # Calculate completion percentage from component scores
-            completion_pct = final_state.final_output.get("completion_percentage", 0)
+            # Extract key results from dict-style state returned by workflow
+            completion_pct = final_state.get("completion_percentage", 0.0)
+            
+            component_scores = {
+                "feature_implementation": final_state.get("implementation_score", 0.0),
+                "code_quality": final_state.get("quality_score", 0.0),
+                "security": final_state.get("security_score", 0.0),
+                "test_coverage": final_state.get("test_coverage_score", 0.0),
+                "documentation": final_state.get("documentation_score", 0.0),
+            }
             
             # Generate test result
             result = {
                 "name": test_name,
                 "success": True,
                 "completion_percentage": completion_pct,
-                "component_scores": final_state.component_scores,
-                "report_summary": final_state.final_output.get("report_summary", ""),
-                "ipfs_hash": final_state.final_output.get("ipfs_hash", ""),
+                "component_scores": component_scores,
+                "report_summary": final_state.get("analysis_summary", ""),
+                "ipfs_hash": final_state.get("ipfs_hash", ""),
                 "duration_seconds": (datetime.now() - start_time).total_seconds()
             }
             

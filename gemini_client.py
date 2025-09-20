@@ -5,6 +5,7 @@ import json
 from typing import Dict, List, Any
 import asyncio
 from dotenv import load_dotenv
+from utils.langchain_logging import LangChainWorkflowLogger
 
 # Load environment variables from .env file
 load_dotenv()
@@ -19,11 +20,14 @@ class GeminiAnalyzer:
         genai.configure(api_key=api_key)
         
         # Initialize LangChain Gemini model
+        # Attach lightweight callback logger for observability
+        self.callbacks = [LangChainWorkflowLogger()]
         self.llm = ChatGoogleGenerativeAI(
             model="gemini-2.5-flash",
             temperature=0.1,
             max_output_tokens=4096,
-            google_api_key=api_key
+            google_api_key=api_key,
+            callbacks=self.callbacks
         )
         
         # Initialize direct Gemini model for advanced features
@@ -114,7 +118,10 @@ class GeminiAnalyzer:
         """
         
         try:
-            response = await self.llm.ainvoke([{"role": "user", "content": prompt}])
+            response = await self.llm.ainvoke(
+                [{"role": "user", "content": prompt}],
+                config={"callbacks": self.callbacks}
+            )
             
             # Parse JSON response
             result = json.loads(response.content)
@@ -182,7 +189,10 @@ class GeminiAnalyzer:
         """
         
         try:
-            response = await self.llm.ainvoke([{"role": "user", "content": prompt}])
+            response = await self.llm.ainvoke(
+                [{"role": "user", "content": prompt}],
+                config={"callbacks": self.callbacks}
+            )
             return json.loads(response.content)
         except Exception as e:
             print(f"❌ Architecture analysis error: {e}")
@@ -234,7 +244,10 @@ class GeminiAnalyzer:
         """
         
         try:
-            response = await self.llm.ainvoke([{"role": "user", "content": prompt}])
+            response = await self.llm.ainvoke(
+                [{"role": "user", "content": prompt}],
+                config={"callbacks": self.callbacks}
+            )
             return json.loads(response.content)
         except Exception as e:
             print(f"❌ Fraud detection error: {e}")

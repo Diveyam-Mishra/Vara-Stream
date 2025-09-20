@@ -1,0 +1,55 @@
+{
+  "tests_run": 3,
+  "tests_passed": 3,
+  "tests_failed": 0,
+  "start_time": "2025-09-20T14:45:13.257571",
+  "test_results": [
+    {
+      "name": "suspicious_commit",
+      "success": true,
+      "completion_percentage": 11.5,
+      "component_scores": {
+        "feature_implementation": 0,
+        "code_quality": 0.0,
+        "security": 0.0,
+        "test_coverage": 50,
+        "documentation": 40
+      },
+      "report_summary": "{\n  \"analysis_metadata\": {\n    \"commit_sha\": \"unknown\",\n    \"timestamp\": \"2025-09-20T14:45:52.640079\",\n    \"analyzer\": \"Gemini-1.5-Pro\",\n    \"confidence\": 85,\n    \"data_quality\": {\n      \"api_call_success\": true,\n      \"data_completeness\": 100.0,\n      \"fetch_errors\": [],\n      \"patches_available\": 4,\n      \"enhanced_data_available\": false\n    }\n  },\n  \"completion_assessment\": {\n    \"overall_percentage\": 11.5,\n    \"component_scores\": {\n      \"feature_implementation\": 0,\n      \"code_quality\": 0.0,\n      \"test_coverage\": 50,\n      \"documentation\": 40,\n      \"security\": 0.0\n    }\n  },\n  \"detailed_analysis\": {\n    \"code_analysis\": {\n      \"code_quality_score\": 0.0,\n      \"feature_implementation_score\": 0.0,\n      \"security_score\": 0.0,\n      \"confidence\": 70,\n      \"data_quality\": {\n        \"patches_analyzed\": 4,\n        \"total_files\": 4,\n        \"data_completeness\": 100.0,\n        \"api_call_success\": true\n      }\n    },\n    \"architecture_analysis\": {\n      \"architectural_impact\": 50,\n      \"completion_contribution\": 0\n    },\n    \"fraud_detection\": {\n      \"fraud_risk_score\": 0,\n      \"legitimate_probability\": 100\n    },\n    \"feature_progress\": {\n      \"feature_implementation_score\": 0\n    }\n  },\n  \"recommendations\": [],\n  \"quality_insights\": {\n    \"strengths\": [],\n    \"concerns\": [],\n    \"improvement_areas\": []\n  },\n  \"data_quality_summary\": {\n    \"completeness_percentage\": 100.0,\n    \"api_integration_status\": \"success\",\n    \"error_count\": 0,\n    \"enhanced_features_available\": false\n  }\n}",
+      "ipfs_hash": "Qm547378898c30a4f23eb94f42d973785e7470c97c2257",
+      "duration_seconds": 39.383834
+    },
+    {
+      "name": "feature_commit",
+      "success": true,
+      "completion_percentage": 19.5,
+      "component_scores": {
+        "feature_implementation": 0,
+        "code_quality": 20.0,
+        "security": 25.0,
+        "test_coverage": 70,
+        "documentation": 40
+      },
+      "report_summary": "{\n  \"analysis_metadata\": {\n    \"commit_sha\": \"unknown\",\n    \"timestamp\": \"2025-09-20T14:47:00.867287\",\n    \"analyzer\": \"Gemini-1.5-Pro\",\n    \"confidence\": 85,\n    \"data_quality\": {\n      \"api_call_success\": true,\n      \"data_completeness\": 100.0,\n      \"fetch_errors\": [],\n      \"patches_available\": 10,\n      \"enhanced_data_available\": false\n    }\n  },\n  \"completion_assessment\": {\n    \"overall_percentage\": 19.5,\n    \"component_scores\": {\n      \"feature_implementation\": 0,\n      \"code_quality\": 20.0,\n      \"test_coverage\": 70,\n      \"documentation\": 40,\n      \"security\": 25.0\n    }\n  },\n  \"detailed_analysis\": {\n    \"code_analysis\": {\n      \"code_quality_score\": 20.0,\n      \"feature_implementation_score\": 30.0,\n      \"security_score\": 25.0,\n      \"confidence\": 70,\n      \"data_quality\": {\n        \"patches_analyzed\": 10,\n        \"total_files\": 10,\n        \"data_completeness\": 100.0,\n        \"api_call_success\": true\n      }\n    },\n    \"architecture_analysis\": {\n      \"architectural_impact\": 50,\n      \"completion_contribution\": 0\n    },\n    \"fraud_detection\": {\n      \"fraud_risk_score\": 0,\n      \"legitimate_probability\": 100\n    },\n    \"feature_progress\": {\n      \"feature_implementation_score\": 0\n    }\n  },\n  \"recommendations\": [],\n  \"quality_insights\": {\n    \"strengths\": [],\n    \"concerns\": [],\n    \"improvement_areas\": []\n  },\n  \"data_quality_summary\": {\n    \"completeness_percentage\": 100.0,\n    \"api_integration_status\": \"success\",\n    \"error_count\": 0,\n    \"enhanced_features_available\": false\n  }\n}",
+      "ipfs_hash": "Qm637f5d5d98ce670d03bf49e851478b3a3d5944e49f29",
+      "duration_seconds": 68.272687
+    },
+    {
+      "name": "basic_commit",
+      "success": true,
+      "completion_percentage": 13.0,
+      "component_scores": {
+        "feature_implementation": 0,
+        "code_quality": 0.0,
+        "security": 0.0,
+        "test_coverage": 60,
+        "documentation": 40
+      },
+      "report_summary": "{\n  \"analysis_metadata\": {\n    \"commit_sha\": \"unknown\",\n    \"timestamp\": \"2025-09-20T14:47:52.366056\",\n    \"analyzer\": \"Gemini-1.5-Pro\",\n    \"confidence\": 85,\n    \"data_quality\": {\n      \"api_call_success\": true,\n      \"data_completeness\": 100.0,\n      \"fetch_errors\": [],\n      \"patches_available\": 2,\n      \"enhanced_data_available\": false\n    }\n  },\n  \"completion_assessment\": {\n    \"overall_percentage\": 13.0,\n    \"component_scores\": {\n      \"feature_implementation\": 0,\n      \"code_quality\": 0.0,\n      \"test_coverage\": 60,\n      \"documentation\": 40,\n      \"security\": 0.0\n    }\n  },\n  \"detailed_analysis\": {\n    \"code_analysis\": {\n      \"code_quality_score\": 0.0,\n      \"feature_implementation_score\": 0.0,\n      \"security_score\": 0.0,\n      \"confidence\": 70,\n      \"data_quality\": {\n        \"patches_analyzed\": 2,\n        \"total_files\": 2,\n        \"data_completeness\": 100.0,\n        \"api_call_success\": true\n      }\n    },\n    \"architecture_analysis\": {\n      \"architectural_impact\": 50,\n      \"completion_contribution\": 0\n    },\n    \"fraud_detection\": {\n      \"fraud_risk_score\": 0,\n      \"legitimate_probability\": 100\n    },\n    \"feature_progress\": {\n      \"feature_implementation_score\": 0\n    }\n  },\n  \"recommendations\": [],\n  \"quality_insights\": {\n    \"strengths\": [],\n    \"concerns\": [],\n    \"improvement_areas\": []\n  },\n  \"data_quality_summary\": {\n    \"completeness_percentage\": 100.0,\n    \"api_integration_status\": \"success\",\n    \"error_count\": 0,\n    \"enhanced_features_available\": false\n  }\n}",
+      "ipfs_hash": "Qm894dafd8404f2e16a00f869e9138e181ed226957810e",
+      "duration_seconds": 51.451895
+    }
+  ],
+  "end_time": "2025-09-20T14:47:52.371757",
+  "duration_seconds": 159.114186
+}

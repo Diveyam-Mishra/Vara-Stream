@@ -20,16 +20,25 @@ from gemini_langgraph_workflow import GeminiCommitWorkflow, CommitState
 from vision.gemini_vision_analyzer import GeminiVisionAnalyzer
 from utils.gemini_optimization import GeminiRateLimiter
 from github_api_client import GitHubAPIClient  # Import the new GitHub API client
+from utils.langchain_logging import ColorFormatter
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("github_webhook.log"),
-        logging.StreamHandler()
-    ]
-)
+# Configure logging with colored console output
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+
+# Remove any default/basicConfig handlers to avoid duplicates
+for _h in list(root_logger.handlers):
+    root_logger.removeHandler(_h)
+
+# File handler (plain)
+_file_handler = logging.FileHandler("github_webhook.log")
+_file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+root_logger.addHandler(_file_handler)
+
+# Console handler (colored)
+_console_handler = logging.StreamHandler()
+_console_handler.setFormatter(ColorFormatter())
+root_logger.addHandler(_console_handler)
 
 logger = logging.getLogger("GitHubWebhook")
 
