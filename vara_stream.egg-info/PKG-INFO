@@ -1,0 +1,17 @@
+Metadata-Version: 2.4
+Name: vara-stream
+Version: 0.1.0
+Summary: Add your description here
+Requires-Python: >=3.12
+Requires-Dist: aiohttp>=3.12.15
+Requires-Dist: cryptography>=45.0.6
+Requires-Dist: fastapi>=0.116.1
+Requires-Dist: google-generativeai>=0.8.5
+Requires-Dist: langchain>=0.3.27
+Requires-Dist: langchain-google-genai>=2.0.6
+Requires-Dist: langgraph>=0.6.5
+Requires-Dist: pillow>=11.3.0
+Requires-Dist: pyjwt[crypto]>=2.10.1
+Requires-Dist: python-dotenv>=1.1.1
+Requires-Dist: requests>=2.32.4
+Requires-Dist: uvicorn>=0.35.0

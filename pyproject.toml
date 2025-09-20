@@ -2,17 +2,39 @@
 name = "vara-stream"
 version = "0.1.0"
 description = "Add your description here"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "aiohttp>=3.12.15",
     "cryptography>=45.0.6",
     "fastapi>=0.116.1",
     "google-generativeai>=0.8.5",
     "langchain>=0.3.27",
+    "langchain-google-genai>=2.0.6",
     "langgraph>=0.6.5",
     "pillow>=11.3.0",
     "pyjwt[crypto]>=2.10.1",
     "python-dotenv>=1.1.1",
     "requests>=2.32.4",
     "uvicorn>=0.35.0",
+]
+
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["utils*", "vision*"]
+exclude = ["testing*"]
+
+[tool.setuptools]
+py-modules = [
+  "gemini_client",
+  "gemini_langgraph_workflow",
+  "github_api_client",
+  "github_config",
+  "github_errors",
+  "github_rate_limit",
+  "github_retry",
+  "main"
 ]
