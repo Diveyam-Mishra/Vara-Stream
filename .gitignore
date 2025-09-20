@@ -1,6 +1,7 @@
-.env
+
 hyper-vara-stream.2025-07-22.private-key.pem
 rsa.pem
 __pycache__
 *.pyc
 *.log
+.venv

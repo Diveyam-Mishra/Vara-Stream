@@ -1,0 +1,26 @@
+# Runtime dependencies for Hyper Vara Streams AI Verification Engine
+# Generated from pyproject.toml and import analysis
+
+# Web framework and server
+fastapi>=0.116.1
+uvicorn>=0.35.0
+
+# GitHub integration and HTTP
+requests>=2.32.4
+pyjwt[crypto]>=2.10.1
+cryptography>=45.0.6
+
+# Async and networking
+aiohttp>=3.12.15
+
+# AI/LLM stack
+langchain>=0.3.27
+langgraph>=0.6.5
+# LangChain provider for Gemini (import: langchain_google_genai)
+langchain-google-genai>=2.0.6
+# Google Generative AI SDK (text + vision)
+google-generativeai>=0.8.5
+
+# Utilities
+python-dotenv>=1.1.1
+pillow>=11.3.0
